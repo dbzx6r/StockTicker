@@ -408,7 +408,13 @@ void loop() {
         MarketHours::isPreCloseWarn())   refreshInterval = REFRESH_MARKET_MS;
     else if (MarketHours::isPreMarket()) refreshInterval = REFRESH_PREMARKET_MS;
 
-    if (now - lastFetchMs >= refreshInterval) fetchData();
+    // If no valid data has been received yet (e.g. initial fetch failed),
+    // retry every 60 s instead of waiting the full refresh interval.
+    bool hasValidData = false;
+    for (int i = 0; i <= cfg.stockCount; i++) {
+        if (stockData[i].valid) { hasValidData = true; break; }
+    }
+    if (now - lastFetchMs >= (hasValidData ? refreshInterval : 60000UL)) fetchData();
 
     // ── State transition check ────────────────────────────────────────────
     AppState desired = resolveMarketState();

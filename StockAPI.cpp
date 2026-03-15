@@ -39,10 +39,17 @@ static bool fetchOne(const char* sym, StockData& s) {
         return false;
     }
 
-    DynamicJsonDocument doc(4096);
-    DeserializationError err = deserializeJson(doc, https.getStream());
-    https.end();
+    // Filter: only keep the meta fields we use — the full response is much larger
+    // than the ESP8266 heap can reliably hold as a DynamicJsonDocument.
+    StaticJsonDocument<128> filter;
+    filter["chart"]["result"][0]["meta"]["regularMarketPrice"] = true;
+    filter["chart"]["result"][0]["meta"]["regularMarketOpen"]  = true;
+    filter["chart"]["result"][0]["meta"]["chartPreviousClose"] = true;
 
+    StaticJsonDocument<512> doc;
+    DeserializationError err = deserializeJson(doc, https.getStream(),
+                                               DeserializationOption::Filter(filter));
+    https.end();
     if (err) {
         Serial.printf("[StockAPI] %s JSON error: %s\n", sym, err.c_str());
         return false;
@@ -56,24 +63,20 @@ static bool fetchOne(const char* sym, StockData& s) {
 
     strlcpy(s.symbol, sym, MAX_TICKER_LEN);
     s.price = meta["regularMarketPrice"] | 0.0f;
+    // On weekends / pre-market, regularMarketPrice can be 0 or absent;
+    // fall back to the previous close so the display always shows a price.
+    if (s.price <= 0.0f)
+        s.price = meta["chartPreviousClose"] | 0.0f;
 
-    // Yahoo Finance computes "change from open" against regularMarketOpen (the
-    // official 9:30 AM bell price).  The indicators.quote[0].open[0] candle
-    // can include pre-market activity and won't match.  Use regularMarketOpen
-    // as the primary source, fall back to the candle, then to prevClose.
+    // regularMarketOpen is the official 9:30 AM bell price used by Yahoo's UI.
     s.open = meta["regularMarketOpen"] | 0.0f;
-    if (s.open <= 0.0f) {
-        JsonArray opens = doc["chart"]["result"][0]["indicators"]["quote"][0]["open"];
-        if (!opens.isNull() && opens.size() > 0 && !opens[0].isNull())
-            s.open = opens[0].as<float>();
-    }
 
     s.prevClose = meta["chartPreviousClose"]         | 0.0f;
     s.change    = s.price - s.prevClose;
     s.changePct = (s.prevClose > 0.0f)
                     ? (s.change / s.prevClose * 100.0f) : 0.0f;
 
-    if (s.open > 0.0f) {  // s.open already set above
+    if (s.open > 0.0f) {
         s.changeFromOpen    = s.price - s.open;
         s.changePctFromOpen = s.changeFromOpen / s.open * 100.0f;
     } else {
