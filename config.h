@@ -34,11 +34,11 @@
 #define REFRESH_AFTERHOURS_MS 600000UL  // 10 min — after hours / weekend
 
 // ─── Display Timing ──────────────────────────────────────────────────────────
-#define STOCK_CYCLE_MS   30000UL   // 30 s per stock during market / after-close cycling
+#define STOCK_CYCLE_MS   35000UL   // 35 s per stock — fits two full 15 s sub-frames + animation
 #define DOW_FLASH_MS     30000UL   // 30 s DOW banner on hourly mark
 #define STOCK_FLASH_MS   30000UL   // 30 s per stock on 10-min blink (after close)
-#define SUBFRAME_MS       4500UL   // ms each sub-frame is held during vertical animation
-#define VERTICAL_SPEED_MS   25     // ms per step for the vertical swipe (lower = faster)
+#define SUBFRAME_MS      15000UL   // ms each sub-frame is held (price, then % change)
+#define VERTICAL_SPEED_MS   40     // ms per step for the vertical swipe (lower = faster)
 
 // ─── Stock Config ─────────────────────────────────────────────────────────────
 #define MAX_STOCKS       5

@@ -41,7 +41,8 @@ static bool fetchOne(const char* sym, StockData& s) {
 
     // Filter: only keep the meta fields we use — the full response is much larger
     // than the ESP8266 heap can reliably hold as a DynamicJsonDocument.
-    StaticJsonDocument<128> filter;
+    // 256 bytes: 7 nodes × 16 bytes + ~74 bytes of key strings + headroom.
+    StaticJsonDocument<256> filter;
     filter["chart"]["result"][0]["meta"]["regularMarketPrice"] = true;
     filter["chart"]["result"][0]["meta"]["regularMarketOpen"]  = true;
     filter["chart"]["result"][0]["meta"]["chartPreviousClose"] = true;
@@ -98,7 +99,7 @@ bool StockAPI::fetchQuotes(const char* symbols[], int count, StockData results[]
         results[i].valid = false;
         if (fetchOne(symbols[i], results[i]))
             anyValid = true;
-        yield();  // give the WiFi stack a chance to process between HTTPS requests
+        delay(300);  // brief pause between requests to avoid server-side rate limiting
     }
     return anyValid;
 }
