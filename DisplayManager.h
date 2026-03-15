@@ -43,7 +43,7 @@ public:
     static bool isAnimationDone();
 
 private:
-    enum Mode { MODE_NORMAL, MODE_FLASH, MODE_VERT_ENTER, MODE_VERT_EXIT };
+    enum Mode { MODE_NORMAL, MODE_FLASH, MODE_STATIC, MODE_VERT_ENTER, MODE_VERT_EXIT };
 
     static MD_Parola     _p;
     static char          _buf[128];
@@ -55,4 +55,5 @@ private:
     static Mode          _mode;
     static bool          _flashOn;
     static unsigned long _flashToggle;
+    static unsigned long _enterAnimMs;  // millis() when verticalEnter() started
 };

@@ -95,6 +95,7 @@ bool StockAPI::fetchQuotes(const char* symbols[], int count, StockData results[]
         results[i].valid = false;
         if (fetchOne(symbols[i], results[i]))
             anyValid = true;
+        yield();  // give the WiFi stack a chance to process between HTTPS requests
     }
     return anyValid;
 }

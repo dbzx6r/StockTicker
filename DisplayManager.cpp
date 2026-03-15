@@ -11,6 +11,7 @@ bool          DisplayManager::_exitDone    = false;
 DisplayManager::Mode DisplayManager::_mode = DisplayManager::MODE_NORMAL;
 bool          DisplayManager::_flashOn     = false;
 unsigned long DisplayManager::_flashToggle = 0;
+unsigned long DisplayManager::_enterAnimMs = 0;
 
 void DisplayManager::begin() {
     _p.begin();
@@ -35,19 +36,36 @@ void DisplayManager::update() {
         return;
     }
 
+    // MODE_STATIC: text is frozen on the MAX7219 hardware — no ticking needed.
+    // verticalExit() will override this by calling _p.displayText() directly.
+    if (_mode == MODE_STATIC) return;
+
     if (_p.displayAnimate()) {
         if (_looping) {
             _p.displayReset();
         } else {
             _done = true;
+            // MODE_VERT_ENTER: handled by the timer below; if displayAnimate()
+            // somehow returns true before the timer fires (e.g. very slow scroll),
+            // fall back to marking enter done here too.
             if (_mode == MODE_VERT_ENTER) {
                 _enterDone = true;
-                _mode      = MODE_NORMAL;   // text now static; no further ticking needed
+                _mode      = MODE_STATIC;
             } else if (_mode == MODE_VERT_EXIT) {
                 _exitDone = true;
                 _mode     = MODE_NORMAL;
             }
         }
+    }
+
+    // Timer-based enter-done: fire once the scroll-in animation has had enough
+    // time to complete (VERTICAL_SPEED_MS × 10 ≈ 250 ms for an 8-row display).
+    // At this point the text is visible on screen; set MODE_STATIC so we stop
+    // calling displayAnimate() and the MAX7219 hardware holds the image.
+    if (_mode == MODE_VERT_ENTER && !_enterDone &&
+            millis() - _enterAnimMs >= (unsigned long)VERTICAL_SPEED_MS * 10) {
+        _enterDone = true;
+        _mode      = MODE_STATIC;
     }
 }
 
@@ -99,8 +117,13 @@ void DisplayManager::verticalEnter(const char* msg) {
     _currentMsg[0] = '\0';
     strlcpy(_buf, msg, sizeof(_buf));
     _p.displayClear();
-    // Swipe in from top; PA_PRINT out = text stays after arriving (no visual change)
-    _p.displayText(_buf, PA_CENTER, VERTICAL_SPEED_MS, 0, PA_SCROLL_DOWN, PA_PRINT);
+    // Scroll in from top.  A 60-second pause keeps the text on screen until
+    // verticalExit() overrides it.  Enter-done is detected via timer (not by
+    // waiting for displayAnimate() to return true) so we freeze into MODE_STATIC
+    // as soon as the scroll-in completes — PA_PRINT out was avoided because it
+    // clears the display on some MD_Parola builds.
+    _p.displayText(_buf, PA_CENTER, VERTICAL_SPEED_MS, 60000, PA_SCROLL_DOWN, PA_SCROLL_DOWN);
+    _enterAnimMs = millis();
 }
 
 void DisplayManager::verticalExit() {

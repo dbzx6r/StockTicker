@@ -302,7 +302,7 @@ void setup() {
     // Reliability settings — must be set before WiFi.begin()
     WiFi.persistent(false);          // Don't wear out flash writing credentials
     WiFi.setSleepMode(WIFI_NONE_SLEEP); // Prevent modem sleep dropping the connection
-    WiFi.setAutoReconnect(false);    // We manage reconnects manually
+    WiFi.setAutoReconnect(true);     // Let the SDK reconnect immediately on any drop
     WiFi.disconnect(true);           // Clear any stale connection state
     delay(100);
 
