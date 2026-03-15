@@ -1,0 +1,26 @@
+# Arduino build output
+build/
+*.elf
+*.bin
+*.hex
+*.map
+
+# Arduino IDE temp files
+*.bak
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
