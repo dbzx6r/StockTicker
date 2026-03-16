@@ -32,11 +32,15 @@ static bool fetchCrumb() {
     https.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
     addCommonHeaders(https);
 
-    // Step 1 — main Finance page; sets A1/A3 session cookie
-    if (!https.begin(client, F("https://finance.yahoo.com"))) {
+    // Step 1 — lightweight Yahoo cookie endpoint; sets A1/A3 session cookie
+    // fc.yahoo.com is a small (~200 B) dedicated cookie-issuance endpoint.
+    // It avoids the huge finance.yahoo.com homepage which exhausts the ESP8266
+    // heap and may redirect to a GDPR consent page that hides the Set-Cookie.
+    if (!https.begin(client, F("https://fc.yahoo.com"))) {
         Serial.println(F("[StockAPI] crumb s1 begin() failed"));
         return false;
     }
+    https.addHeader(F("Accept"), F("*/*"));
     const char* wantHeaders[] = { "Set-Cookie" };
     https.collectHeaders(wantHeaders, 1);
 
@@ -47,7 +51,7 @@ static bool fetchCrumb() {
     https.end();
 
     if (raw.isEmpty()) {
-        Serial.println(F("[StockAPI] No Set-Cookie from finance.yahoo.com"));
+        Serial.println(F("[StockAPI] No Set-Cookie from fc.yahoo.com"));
         return false;
     }
     // Keep only the name=value pair (before first ';')
@@ -133,12 +137,12 @@ static bool fetchOne(const char* sym, StockData& s) {
         return false;
     }
 
-    StaticJsonDocument<256> filter;
+    StaticJsonDocument<512> filter;
     filter["chart"]["result"][0]["meta"]["regularMarketPrice"] = true;
     filter["chart"]["result"][0]["meta"]["regularMarketOpen"]  = true;
     filter["chart"]["result"][0]["meta"]["chartPreviousClose"] = true;
 
-    StaticJsonDocument<512> doc;
+    StaticJsonDocument<1024> doc;
     DeserializationError err = deserializeJson(doc, https.getStream(),
                                                DeserializationOption::Filter(filter));
     https.end();
