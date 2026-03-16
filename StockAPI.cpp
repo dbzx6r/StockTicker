@@ -34,7 +34,7 @@ static bool fetchOne(const char* sym, StockData& s) {
         if (*p == '^') url += F("%5E");
         else           url += *p;
     }
-    url += F("?interval=1d&range=5d");
+    url += F("?interval=1d&range=1d");  // range=1d → chartPreviousClose = prior session close (1-day change)
     Serial.println(url);
 
     BearSSL::WiFiClientSecure client;
